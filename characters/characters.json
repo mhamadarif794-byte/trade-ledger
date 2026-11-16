@@ -1,0 +1,119 @@
+{
+ "characters": [
+  {
+   "id": "f1",
+   "gender": "female",
+   "name": "Grace",
+   "image": "characters/f1.webp",
+   "thumb": "characters/f1_thumb.webp",
+   "mode": "body",
+   "eyes": [
+    {
+     "x": 0.4454,
+     "y": 0.1008,
+     "w": 0.0481,
+     "h": 0.0158
+    },
+    {
+     "x": 0.55,
+     "y": 0.1008,
+     "w": 0.0481,
+     "h": 0.0158
+    }
+   ],
+   "skin": "#fbd0c0"
+  },
+  {
+   "id": "f2",
+   "gender": "female",
+   "name": "Seraphina",
+   "image": "characters/f2.webp",
+   "thumb": "characters/f2_thumb.webp",
+   "mode": "body",
+   "eyes": [
+    {
+     "x": 0.4444,
+     "y": 0.095,
+     "w": 0.0593,
+     "h": 0.015
+    },
+    {
+     "x": 0.5444,
+     "y": 0.095,
+     "w": 0.0556,
+     "h": 0.015
+    }
+   ],
+   "skin": "#fbd5bd"
+  },
+  {
+   "id": "f3",
+   "gender": "female",
+   "name": "Elowen",
+   "image": "characters/f3.webp",
+   "thumb": "characters/f3_thumb.webp",
+   "mode": "body",
+   "eyes": [
+    {
+     "x": 0.3315,
+     "y": 0.1033,
+     "w": 0.0593,
+     "h": 0.0142
+    },
+    {
+     "x": 0.4463,
+     "y": 0.1033,
+     "w": 0.0593,
+     "h": 0.0142
+    }
+   ],
+   "skin": "#f0c2a0"
+  },
+  {
+   "id": "f4",
+   "gender": "female",
+   "name": "Eliana",
+   "image": "characters/f4.webp",
+   "thumb": "characters/f4_thumb.webp",
+   "mode": "body",
+   "eyes": [
+    {
+     "x": 0.4343,
+     "y": 0.1417,
+     "w": 0.0593,
+     "h": 0.0158
+    },
+    {
+     "x": 0.5574,
+     "y": 0.1417,
+     "w": 0.0611,
+     "h": 0.0158
+    }
+   ],
+   "skin": "#fbdcc8"
+  },
+  {
+   "id": "f5",
+   "gender": "female",
+   "name": "Valeria",
+   "image": "characters/f5.webp",
+   "thumb": "characters/f5_thumb.webp",
+   "mode": "body",
+   "eyes": [
+    {
+     "x": 0.4713,
+     "y": 0.085,
+     "w": 0.0556,
+     "h": 0.0125
+    },
+    {
+     "x": 0.562,
+     "y": 0.085,
+     "w": 0.0537,
+     "h": 0.0125
+    }
+   ],
+   "skin": "#f4decd"
+  }
+ ]
+}
