@@ -3926,7 +3926,7 @@ const VOICE_LANG = { hg:'hi-IN', en:'en-US', ur:'ur-PK', hi:'hi-IN', ar:'ar-SA',
 const DEFAULT_NAMES = { female:'Noor', male:'Zain' };
 
 let aiChats = [], aiActiveId = null, aiHistory = [], aiBusy = false;
-let aiPersona = { gender:'female', name:'Noor', speak:false, char:'' };
+let aiPersona = { gender:'female', name:'Noor', speak:true, char:'' };
 let aiSaveTimer = null, aiRec = null;
 
 /* ---------- avatar status ---------- */
@@ -3957,7 +3957,7 @@ function aiNewChat(silent){
 function aiResetState(){ aiChats = []; aiActiveId = null; aiHistory = []; if($('aiLog')) $('aiLog').innerHTML = ''; aiStopSpeaking(); try{ if(typeof aiMicStop === 'function') aiMicStop(); }catch(e){} }
 async function aiLoadChats(journalData){
   try{ await loadCharacters(); }catch(e){}
-  aiPersona = Object.assign({ gender:'female', name:DEFAULT_NAMES.female, speak:false, char:'' }, (journalData && journalData.aiPersona) || {});
+  aiPersona = Object.assign({ gender:'female', name:DEFAULT_NAMES.female, speak:true, char:'' }, (journalData && journalData.aiPersona) || {});
   if(aiPersona.gender !== 'male') aiPersona.gender = 'female';
   let chats = [];
   try{ const snap = await chatsDoc().get(); if(snap.exists && Array.isArray(snap.data().chats)) chats = snap.data().chats; }catch(e){}
