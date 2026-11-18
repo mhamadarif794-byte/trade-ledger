@@ -10,5 +10,5 @@ window.TL_CONFIG = {
 
   // NOT recommended for a public site: anyone can read a key written here.
   // Only use it for quick testing, with a key restricted to your website address.
-  AI_KEY: "AQ.Ab8RN6L5UlzaFU6gBGSCRwbE5XVSK1LQgLvp_XEjuGbnQCeJBA"
+  AI_KEY:"AIzaSyAjMMCXNcTrP1_QB45FJ6IFFkuykoRCqWg"
 };
