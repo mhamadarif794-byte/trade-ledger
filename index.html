@@ -1530,6 +1530,10 @@
       <div class="st-title2">Character</div>
       <div class="char-grid" id="charGrid"></div>
       <div class="goal-note" id="charNote"></div>
+      <div class="st-title2">Apni photo se avatar</div>
+      <div class="goal-note">Kisi ki bhi photo lagao — wohi tumhara avatar ban jayega. Photo sirf is device par save hoti hai.</div>
+      <div class="st-row"><button type="button" class="btn btn-small" id="btnCustomAv">📷 Apni photo lagao</button><button type="button" class="btn btn-small hidden" id="btnCustomAvRemove">✖ Photo hatao</button></div>
+      <input type="file" id="customAvInput" accept="image/*" hidden>
     </div>
     <div class="st-sec">
       <div class="st-title">🤖 AI</div>
@@ -4338,6 +4342,7 @@ function aiSpeakBrowser(clean){
     if(voice){ u.voice = voice; u.lang = voice.lang; } else u.lang = lang;
     u.pitch = aiPersona.gender === 'female' ? 1.12 : 0.88; u.rate = 1; u.volume = 1;
     if(i === 0) u.onstart = ()=>{ aiSpeakStart(); };
+    u.onboundary = ()=>{ try{ AvatarCtl.mouthPulse(); }catch(e){} };
     if(i === chunks.length - 1){ u.onend = u.onerror = ()=>{ aiSpeakDone(); }; }
     window.speechSynthesis.speak(u);
   });
@@ -4352,7 +4357,7 @@ function aiApplyPersonaUI(){
   const ch = currentChar();
   if(ch){
     aiPersona.gender = ch.gender;
-    if(!aiPersona.name || aiPersona.name === DEFAULT_NAMES.female || aiPersona.name === DEFAULT_NAMES.male) aiPersona.name = ch.name || aiPersona.name;
+    if(ch.id !== 'custom' && (!aiPersona.name || aiPersona.name === DEFAULT_NAMES.female || aiPersona.name === DEFAULT_NAMES.male)) aiPersona.name = ch.name || aiPersona.name;
   }
   const th = $('aiCharThumb');
   if(ch && (ch.thumb || ch.image)){ th.src = ch.thumb || ch.image; th.style.display = ''; } else th.style.display = 'none';
@@ -4654,7 +4659,27 @@ async function loadCharacters(){
       if(!CHARS.length) CHAR_ERR = 'characters.json mein koi valid character nahi';
     }
   }catch(e){ CHARS = []; CHAR_ERR = 'network: ' + (e && e.message ? e.message : 'error'); }
+  injectCustomChar();
   return CHARS;
+}
+/* apni photo wala avatar: photo localStorage mein save hoti hai, sirf is device par */
+const CUSTOM_AV_KEY = 'tl_custom_avatar';
+function customAvatarChar(){
+  let url = '';
+  try{ url = localStorage.getItem(CUSTOM_AV_KEY) || ''; }catch(e){}
+  if(!url) return null;
+  return { id:'custom', gender: aiPersona.gender || 'female', name:'Meri Photo', image:url, thumb:url, mode:'body', fit:'cover',
+    eyes:[ { x:0.40, y:0.30, w:0.07, h:0.035 }, { x:0.55, y:0.30, w:0.07, h:0.035 } ],
+    mouth:{ x:0.45, y:0.42, w:0.10, h:0.03 }, skin:'#f0c8aa' };
+}
+function injectCustomChar(){
+  const custom = customAvatarChar();
+  const i = CHARS.findIndex(c=>c.id === 'custom');
+  if(i >= 0) CHARS.splice(i, 1);
+  if(custom) CHARS.unshift(custom);
+}
+function syncCustomAvUI(){
+  const b = $('btnCustomAvRemove'); if(b) b.classList.toggle('hidden', !customAvatarChar());
 }
 function currentChar(){
   let c = CHARS.find(x=>x.id === aiPersona.char);
@@ -4664,8 +4689,9 @@ function currentChar(){
 
 /* blink one eye on top of the (swaying) picture; g = where the picture sits inside the canvas */
 const AvatarFace = (function(){
-  function blinkEye(ctx, img, iw, g, ch, e, b, dx){
-    const k = g.w / iw;
+  function blinkEye(ctx, img, iw, g, ch, e, b, dx, src){
+    const s0 = src || { x:0, y:0, w:iw, h:img.naturalHeight };
+    const k = g.w / s0.w;
     const cx = g.x + e.x*g.w + dx, cy = g.y + e.y*g.h, ew = e.w*g.w, eh = e.h*g.h;
     const top = cy - eh*0.9, full = eh*1.8;
     const s = 1 - 0.9*b, ay = cy + eh*0.3, dy = ay - (ay - top)*s;
@@ -4675,10 +4701,30 @@ const AvatarFace = (function(){
     gr.addColorStop(0, skin); gr.addColorStop(1, skin + '00');
     ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(0, 0, rx, 0, Math.PI*2); ctx.fill(); ctx.restore();
     ctx.save(); ctx.beginPath(); ctx.ellipse(cx, cy, rx*0.9, ry*0.95, 0, 0, Math.PI*2); ctx.clip();
-    ctx.drawImage(img, (e.x*g.w - ew*0.7)/k, (e.y*g.h - eh*0.9)/k, (ew*1.4)/k, full/k, cx - ew*0.7, dy, ew*1.4, full*s);
+    ctx.drawImage(img, s0.x + (e.x*g.w - ew*0.7)/k, s0.y + (e.y*g.h - eh*0.9)/k, (ew*1.4)/k, full/k, cx - ew*0.7, dy, ew*1.4, full*s);
     ctx.restore();
   }
-  return { blinkEye };
+  /* khula munh: bolte waqt munh ke upar khula hua andhera munh banta hai, band hote hi asal smile wapas */
+  function drawMouth(ctx, img, iw, g, ch, open, dx){
+    const m = ch.mouth; if(!m) return;
+    const cx = g.x + (m.x + m.w/2)*g.w + dx, cy = g.y + (m.y + m.h/2)*g.h, mw = m.w*g.w, mh = m.h*g.h;
+    const rx = mw*0.62, ry = Math.max(0.8, mh*(0.3 + open*1.9));
+    ctx.save();
+    ctx.beginPath(); ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI*2); ctx.clip();
+    const gr = ctx.createLinearGradient(0, cy - ry, 0, cy + ry);
+    gr.addColorStop(0, '#7a2a22'); gr.addColorStop(0.55, '#4d130e'); gr.addColorStop(1, '#8a3a2a');
+    ctx.fillStyle = gr; ctx.fillRect(cx - rx, cy - ry, rx*2, ry*2);
+    if(open > 0.45){
+      ctx.fillStyle = '#c65a6a';
+      ctx.beginPath(); ctx.ellipse(cx, cy + ry*0.45, rx*0.55, ry*0.5, 0, 0, Math.PI*2); ctx.fill();
+    }
+    ctx.restore();
+    ctx.save();
+    ctx.strokeStyle = 'rgba(150,60,55,0.5)'; ctx.lineWidth = Math.max(1, mh*0.10);
+    ctx.beginPath(); ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI*2); ctx.stroke();
+    ctx.restore();
+  }
+  return { blinkEye, drawMouth };
 })();
 
 /* a still full-body picture that sways, breathes, flutters at the hem and blinks */
@@ -4696,16 +4742,24 @@ const AvatarBody = (function(){
     ctx.clearRect(0, 0, w, h);
     const iw = img.naturalWidth, ih = img.naturalHeight;
     const g = { w: w*S, h: h*S }; g.x = (w - g.w)/2; g.y = h - g.h;
+    let sx = 0, sy0 = 0, sw = iw, sh = ih;
+    if(ch.fit === 'cover'){
+      const sc = Math.max(g.w/iw, g.h/ih); sw = g.w/sc; sh = g.h/sc; sx = (iw - sw)/2; sy0 = (ih - sh)/2;
+    }
+    const src = { x:sx, y:sy0, w:sw, h:sh };
     const breathe = st.motion ? 1 + Math.sin(st.t/1700) * 0.004 : 1;
     for(let i = 0; i < N; i++){
       const y0 = i/N, y1 = (i + 1)/N;
       const dx = off((y0 + y1)/2, st.t, g.w, st.speaking, st.motion);
       const dt = g.y + g.h - (g.h - y0*g.h) * breathe, dh = (y1 - y0)*g.h*breathe + 1;
-      const sy = y0*ih, sh = Math.min((y1 - y0)*ih + 1, ih - sy);
-      ctx.drawImage(img, 0, sy, iw, sh, g.x + dx, dt, g.w, dh);
+      const syy = sy0 + y0*sh, shh = Math.min((y1 - y0)*sh + 1, sh - y0*sh);
+      ctx.drawImage(img, sx, syy, sw, shh, g.x + dx, dt, g.w, dh);
     }
     if(st.blink > 0.01 && ch.eyes){
-      ch.eyes.forEach(e=> AvatarFace.blinkEye(ctx, img, iw, g, ch, e, st.blink, off(e.y, st.t, g.w, st.speaking, st.motion)));
+      ch.eyes.forEach(e=> AvatarFace.blinkEye(ctx, img, iw, g, ch, e, st.blink, off(e.y, st.t, g.w, st.speaking, st.motion), src));
+    }
+    if(st.mouth > 0.02 && ch.mouth){
+      AvatarFace.drawMouth(ctx, img, iw, g, ch, st.mouth, off(ch.mouth.y + ch.mouth.h/2, st.t, g.w, st.speaking, st.motion));
     }
   }
   return { render, off };
@@ -4713,7 +4767,7 @@ const AvatarBody = (function(){
 
 const AvatarCtl = (function(){
   let stage = null, builtFor = null, cv = null, img = null, idleV = null, talkV = null, speaking = false, host = null, curCh = null;
-  let run = false, raf = 0, last = 0, lastDraw = 0, t0 = 0, blinkT = -1, nextBlink = 1800;
+  let run = false, raf = 0, last = 0, lastDraw = 0, t0 = 0, blinkT = -1, nextBlink = 1800, mouthCur = 0, mouthTarget = 0, mouthNext = 0;
   function mkVideo(src, poster){
     const v = document.createElement('video');
     v.src = src; if(poster) v.poster = poster;
@@ -4755,7 +4809,7 @@ const AvatarCtl = (function(){
     if(!w || !h) return;
     if(cv.width !== Math.round(w*dpr)){ cv.width = Math.round(w*dpr); cv.height = Math.round(h*dpr); }
     const c2 = cv.getContext('2d'); c2.setTransform(dpr, 0, 0, dpr, 0, 0);
-    AvatarBody.render(c2, img, w, h, curCh, { t:t0, blink, speaking, motion: window.__FX.motion !== false });
+    AvatarBody.render(c2, img, w, h, curCh, { t:t0, blink, speaking, mouth: mouthCur, motion: window.__FX.motion !== false });
   }
   function frame(now){
     if(!run) return;
@@ -4764,6 +4818,11 @@ const AvatarCtl = (function(){
     if(nextBlink <= 0 && blinkT < 0){ blinkT = 0; nextBlink = Math.random() < 0.2 ? 260 : 2200 + Math.random()*3500; }
     let blink = 0;
     if(blinkT >= 0){ blinkT += dt; const p = blinkT/200; if(p >= 1) blinkT = -1; else blink = Math.sin(p*Math.PI); }
+    if(speaking){
+      mouthNext -= dt;
+      if(mouthNext <= 0){ mouthTarget = Math.random() < 0.18 ? 0 : 0.25 + Math.random()*0.75; mouthNext = 70 + Math.random()*110; }
+      mouthCur += (mouthTarget - mouthCur) * 0.45;
+    } else mouthCur += (0 - mouthCur) * 0.25;
     const interval = window.__FX.motion !== false ? 33 : 500;
     if(cv && (now - lastDraw >= interval || blink > 0 || speaking)){ lastDraw = now; draw(blink); }
     raf = requestAnimationFrame(frame);
@@ -4782,6 +4841,7 @@ const AvatarCtl = (function(){
     },
     refresh(){ const c = currentChar(); if(host && c && builtFor !== c.id) api.mount(host); },
     stop(){ stopLoop(); if(idleV) idleV.pause(); if(talkV) talkV.pause(); },
+    mouthPulse(){ mouthTarget = 1; mouthNext = 70; },
     setSpeaking(v){
       speaking = !!v;
       if(!stage) return;
@@ -4874,6 +4934,7 @@ function openSettings(){
   let q = 'balanced', wk = '0'; try{ q = localStorage.getItem('tl_ai_q') || 'balanced'; wk = localStorage.getItem('tl_wake') || '0'; }catch(e){}
   $('stAiQ').value = q; $('stWake').checked = wk === '1'; $('stAlways').checked = aiAlways;
   syncProviderUI();
+  syncCustomAvUI();
   renderCharGrid();
   $('settingsModal').classList.remove('hidden');
 }
@@ -4891,7 +4952,7 @@ async function renderCharGrid(){
       const old = currentChar();
       aiPersona.gender = c.gender; aiPersona.char = c.id;
       const wasDefault = !aiPersona.name || aiPersona.name === DEFAULT_NAMES.female || aiPersona.name === DEFAULT_NAMES.male || (old && aiPersona.name === old.name);
-      if(wasDefault) aiPersona.name = c.name || DEFAULT_NAMES[c.gender];
+      if(wasDefault && c.id !== 'custom') aiPersona.name = c.name || DEFAULT_NAMES[c.gender];
       aiApplyPersonaUI(); aiSavePersona(); avatarRoute(); renderCharGrid();
       if(!aiHistory.length) aiRenderHistory();
     });
@@ -4899,6 +4960,39 @@ async function renderCharGrid(){
   });
   $('charNote').textContent = CHARS.length ? '' : t('Characters abhi nahi mile.');
 }
+$('btnCustomAv').addEventListener('click', ()=> $('customAvInput').click());
+$('customAvInput').addEventListener('change', ()=>{
+  const f = $('customAvInput').files && $('customAvInput').files[0];
+  $('customAvInput').value = '';
+  if(!f) return;
+  if(!/^image\//.test(f.type || '')){ showToast('Sirf photo (image) chuno'); return; }
+  const rd = new FileReader();
+  rd.onload = ()=>{
+    const im = new Image();
+    im.onload = ()=>{
+      try{
+        const c = document.createElement('canvas');
+        let w = im.naturalWidth, h = im.naturalHeight;
+        const s = Math.min(540/w, 1200/h, 1); w = Math.max(1, Math.round(w*s)); h = Math.max(1, Math.round(h*s));
+        c.width = w; c.height = h;
+        c.getContext('2d').drawImage(im, 0, 0, w, h);
+        const url = c.toDataURL('image/jpeg', 0.85);
+        try{ localStorage.setItem(CUSTOM_AV_KEY, url); }catch(e){ showToast('Photo bari hai, save nahi hui'); return; }
+        aiPersona.char = 'custom'; aiSavePersona();
+        injectCustomChar(); avatarRoute(); renderCharGrid(); syncCustomAvUI();
+        showToast('Apni photo avatar lag gayi');
+      }catch(e){ showToast('Photo load nahi hui'); }
+    };
+    im.onerror = ()=> showToast('Photo load nahi hui');
+    im.src = rd.result;
+  };
+  rd.readAsDataURL(f);
+});
+$('btnCustomAvRemove').addEventListener('click', ()=>{
+  try{ localStorage.removeItem(CUSTOM_AV_KEY); }catch(e){}
+  if(aiPersona.char === 'custom'){ aiPersona.char = ''; aiSavePersona(); }
+  injectCustomChar(); avatarRoute(); renderCharGrid(); syncCustomAvUI();
+});
 $('btnSettings').addEventListener('click', openSettings);
 $('stClose').addEventListener('click', ()=> $('settingsModal').classList.add('hidden'));
 $('settingsModal').addEventListener('click', (e)=>{ if(e.target === $('settingsModal')) $('settingsModal').classList.add('hidden'); });
